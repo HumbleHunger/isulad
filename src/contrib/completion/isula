@@ -1,0 +1,127 @@
+#!/usr/bin/env bash
+
+_isula_isula() 
+{
+    local isula_management_commands=(
+        volume
+    )
+
+    local isula_commands=(
+        attach
+        cp
+        create
+        events
+        exec
+        export
+        images
+        import
+        info
+        inspect
+        kill
+        load
+        login
+        logout
+        logs
+        pause
+        ps
+        pull
+        rename
+        restart
+        rm
+        rmi
+        run
+        start
+        stats
+        stop
+        tag
+        top
+        unpause
+        update
+        version
+        wait
+    )
+
+    local commands=(${isula_management_commands[*]} ${isula_commands[*]})
+    local common_options=(
+        --help
+        -H --host
+        --tls
+        --tlscacert
+        --tlscert
+        --tlskey
+        --tlsverify
+        --version
+    )
+
+    case "$prev" in
+        #todo.....
+    esac
+
+    case "$cur" in
+        -*)
+            COMPREPLY=( $( compgen -W "${common_options[*]}" -- "$cur" ) )
+            ;;
+        *)
+            COMPREPLY=( $( compgen -W "${commands[*]}" -- "$cur" ) )
+            ;;
+    esac
+}
+
+_isula_default() 
+{
+    COMPREPLY=( $( compgen -d -f -- $cur ) )
+}
+
+_isula_isula_list_images_with_tag()
+{
+    local images_with_tag=()
+    case "$cur" in
+        *:*)
+            front=${cur%:*}
+            #先去掉第一行，然后过滤指定镜像名
+            images_with_tag=($(isula images |awk 'NR>1'|grep -w "$front"| awk '{print $2}'))
+            cur=${cur##*:}
+            ;;
+        *)
+            images_with_tag=($(isula images |awk 'NR>1{printf "%s:%s\n",$1,$2}'))
+            ;;
+    esac
+            
+    COMPREPLY=( $( compgen -W "${images_with_tag[*]}" -- "$cur" ) )
+}
+
+_isula_isula_rmi()
+{
+    _isula_isula_list_images_with_tag
+}
+
+_isula_isula_tag()
+{
+    _isula_isula_list_images_with_tag
+}
+
+_isula_isula_images()
+{
+    _isula_isula_list_images_with_tag
+}
+
+_isula()
+{
+    COMPREPLY=()
+
+    local cur prev words cword
+    _get_comp_words_by_ref -n : cur prev words cword
+    local command='isula'
+    if [ $cword -gt 1 ] ; then
+        command="isula_${words[1]}"
+    fi
+    local completions_func=_isula_${command//-/_}
+    if declare -F $completions_func >/dev/null; then
+        $completions_func
+    else
+        _isula_default
+    fi
+    return 0
+}
+
+complete -F _isula isula
